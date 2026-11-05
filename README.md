@@ -29,6 +29,7 @@ On first launch the add-on writes `fh6rr.ini` and `fh6rr.log` next to it.
 | **F8** | **Whole mod on/off** (off = the game's own DLSS and GI denoiser). Key set by `toggle_key` |
 | F7 | DLSS Ray Reconstruction on/off (off = the game's normal DLSS) |
 | F6 | GI denoiser bypass on/off (off = the game's own GI denoiser, still upscaled by RR) |
+| F5 | Cycle the raw GI occlusion mode (see `gi_ao`) |
 
 Both start on. The GI bypass only acts while RR is actually running, so raw noisy GI never reaches the screen
 without RR denoising it. If anything RR needs is missing, the add-on logs it and leaves the game's DLSS in place.
@@ -39,6 +40,7 @@ without RR denoising it. If anything RR needs is missing, the add-on logs it and
 rr=1          ; start with RR on
 gi_bypass=1   ; start with the GI denoiser bypass on
 gi_scale=0    ; raw GI brightness: 0 = x1 (matches the game), 1 = xPI, 2 = x2, 3 = x0.5
+gi_ao=2       ; raw GI occlusion from ray hit distance: 0 = off, 1 = soft 0.25 m, 2 = soft 1 m (matches the game), 3 = hard 1.5 m
 hotkeys=1     ; F8/F7/F6 toggles
 toggle_key=119 ; master on/off key as a Windows virtual-key code: 119 = F8, 120 = F9, 121 = F10
 ```

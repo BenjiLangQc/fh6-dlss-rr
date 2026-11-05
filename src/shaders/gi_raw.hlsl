@@ -6,12 +6,18 @@
 //   u3,  space36 : signal B (L1x, L1y, L1z, L0)    -> read by the resolve pass as t23
 // Writing L1 = 0 and L0 = Y makes the resolve output exactly the raw per-pixel irradiance (no direction needed).
 
-#ifndef GI_SCALE
-#define GI_SCALE 1.0
+// Variants are compiled by build.bat: GI_SCALE_IDX 0..3 = x1, xPI, x2, x0.5
+//                                  GI_AO_IDX    0..3 = off, soft 0.25 m, soft 1 m (matches the game in tests), hard 1.5 m
+// The game's own temporal pass reads its AO radius and soft/hard mode from a constant buffer we cannot see
+// from this pass, so the mode is user-selectable (F5 / fh6rr.ini gi_ao).
+#ifndef GI_SCALE_IDX
+#define GI_SCALE_IDX 0
 #endif
-#ifndef AO_RADIUS
-#define AO_RADIUS 1.5
+#ifndef GI_AO_IDX
+#define GI_AO_IDX 2
 #endif
+static const float k_scales[4] = { 1.0, 3.14159265, 2.0, 0.5 };
+#define GI_SCALE k_scales[GI_SCALE_IDX]
 
 Texture2D<float4>   g_raw  : register(t23, space36);
 RWTexture2D<float4> g_outA : register(u2, space36);
@@ -27,8 +33,16 @@ void main(uint2 id : SV_DispatchThreadID)
 
 	const float4 raw = g_raw[id];
 	const float3 L = max(raw.rgb, 0.0) * GI_SCALE;
-	// Same visibility rule the game's temporal pass applies per ray: a short hit occludes
-	const float ao = (raw.a > 0.0 && raw.a < AO_RADIUS) ? 0.0 : 1.0;
+	// Visibility from the ray hit distance (hitT <= 0 means the ray missed / no hit)
+#if GI_AO_IDX == 0
+	const float ao = 1.0;
+#elif GI_AO_IDX == 1
+	const float ao = raw.a > 0.0 ? saturate(raw.a / 0.25) : 1.0;
+#elif GI_AO_IDX == 2
+	const float ao = raw.a > 0.0 ? saturate(raw.a / 1.0) : 1.0;
+#else
+	const float ao = (raw.a > 0.0 && raw.a < 1.5) ? 0.0 : 1.0;
+#endif
 
 	const float Y  = 0.25 * L.r + 0.5 * L.g + 0.25 * L.b;
 	const float Co = 0.5 * (L.r - L.b);

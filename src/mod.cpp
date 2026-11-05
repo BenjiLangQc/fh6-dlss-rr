@@ -34,7 +34,7 @@
 using namespace reshade::api;
 
 extern "C" __declspec(dllexport) const char *NAME = "FH6 DLSS Ray Reconstruction";
-extern "C" __declspec(dllexport) const char *DESCRIPTION = "Runs DLSS Ray Reconstruction instead of DLSS Super Resolution and feeds it FH6's raw ray-traced GI. F7 = RR on/off, F6 = GI denoiser bypass on/off.";
+extern "C" __declspec(dllexport) const char *DESCRIPTION = "Runs DLSS Ray Reconstruction instead of DLSS Super Resolution and feeds it FH6's raw ray-traced GI. F8 = mod on/off, F7 = RR, F6 = GI denoiser bypass, F5 = GI occlusion mode.";
 
 // ---------------------------------------------------------------------------------------------
 // Log + config
@@ -62,6 +62,7 @@ struct Config
 	bool rr = true;          // start with DLSS-RR enabled
 	bool gi_bypass = true;   // start with the GI denoiser bypass enabled (only acts while RR works)
 	int gi_scale = 0;        // 0 = x1 (matches the game), 1 = xPI, 2 = x2, 3 = x0.5
+	int gi_ao = 2;           // 0 = off, 1 = soft 0.25 m, 2 = soft 1 m (matches the game), 3 = hard 1.5 m
 	bool hotkeys = true;     // F7 / F6 toggles
 	int toggle_key = VK_F8;  // master on/off key (whole mod)
 };
@@ -82,6 +83,8 @@ static void load_config()
 				"gi_bypass=1\n"
 				"; Raw GI brightness: 0 = x1 (matches the game), 1 = xPI, 2 = x2, 3 = x0.5\n"
 				"gi_scale=0\n"
+				"; Raw GI occlusion from ray hit distance: 0 = off, 1 = soft 0.25 m, 2 = soft 1 m (matches the game), 3 = hard 1.5 m. F5 cycles\n"
+				"gi_ao=2\n"
 				"; Enable the F7/F6 hotkeys\n"
 				"hotkeys=1\n"
 				"; Master key that switches the whole mod on/off (Windows virtual-key code). 119 = F8, 120 = F9, 121 = F10\n"
@@ -93,9 +96,10 @@ static void load_config()
 	g_cfg.rr = get(L"rr", 1) != 0;
 	g_cfg.gi_bypass = get(L"gi_bypass", 1) != 0;
 	g_cfg.gi_scale = std::clamp(get(L"gi_scale", 0), 0, 3);
+	g_cfg.gi_ao = std::clamp(get(L"gi_ao", 2), 0, 3);
 	g_cfg.hotkeys = get(L"hotkeys", 1) != 0;
 	g_cfg.toggle_key = std::clamp(get(L"toggle_key", VK_F8), 1, 254);
-	logf("config: rr=%d gi_bypass=%d gi_scale=%d hotkeys=%d toggle_key=%d", g_cfg.rr, g_cfg.gi_bypass, g_cfg.gi_scale, g_cfg.hotkeys, g_cfg.toggle_key);
+	logf("config: rr=%d gi_bypass=%d gi_scale=%d gi_ao=%d hotkeys=%d toggle_key=%d", g_cfg.rr, g_cfg.gi_bypass, g_cfg.gi_scale, g_cfg.gi_ao, g_cfg.hotkeys, g_cfg.toggle_key);
 }
 
 static uint64_t fnv1a(const void *data, size_t size)
@@ -329,7 +333,7 @@ static void on_bind_rts(command_list *cmd, uint32_t count, const resource_view *
 		rr::on_gbuffer(rts);
 }
 
-static bool g_f7_down = false, g_f6_down = false, g_master_down = false;
+static bool g_f7_down = false, g_f6_down = false, g_f5_down = false, g_master_down = false;
 
 static void on_present(command_queue *, swapchain *, const rect *, const rect *, uint32_t, const rect *)
 {
@@ -358,6 +362,9 @@ static void on_present(command_queue *, swapchain *, const rect *, const rect *,
 		const bool f6 = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
 		if (f6 && !g_f6_down) gi::toggle();
 		g_f6_down = f6;
+		const bool f5 = (GetAsyncKeyState(VK_F5) & 0x8000) != 0;
+		if (f5 && !g_f5_down) gi::next_ao();
+		g_f5_down = f5;
 	}
 }
 
@@ -383,6 +390,7 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID)
 		rr::set_enabled(g_cfg.rr);
 		gi::set_enabled(g_cfg.gi_bypass);
 		gi::set_scale(g_cfg.gi_scale);
+		gi::set_ao(g_cfg.gi_ao);
 
 		MH_Initialize();
 		if (HMODULE kb = GetModuleHandleW(L"kernelbase.dll"))

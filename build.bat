@@ -18,11 +18,12 @@ set DXC="C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxc.exe"
 set SH=%ROOT%src\shaders
 %DXC% -nologo -T cs_6_0 -E main -O3 -Fh "%B%\gen\debug_view_cs.h" -Vn g_debug_view_cs "%SH%\debug_view.hlsl" >nul || goto :fail
 %DXC% -nologo -T cs_6_0 -E main -O3 -Fh "%B%\gen\rr_guides_cs.h" -Vn g_rr_guides_cs "%SH%\rr_guides.hlsl" >nul || goto :fail
-%DXC% -nologo -T cs_6_0 -E main -O3 -D GI_SCALE=1.0 -Fh "%B%\gen\gi_raw_1.h" -Vn g_gi_raw_cs_1 "%SH%\gi_raw.hlsl" >nul || goto :fail
-%DXC% -nologo -T cs_6_0 -E main -O3 -D GI_SCALE=3.14159265 -Fh "%B%\gen\gi_raw_pi.h" -Vn g_gi_raw_cs_pi "%SH%\gi_raw.hlsl" >nul || goto :fail
-%DXC% -nologo -T cs_6_0 -E main -O3 -D GI_SCALE=2.0 -Fh "%B%\gen\gi_raw_2.h" -Vn g_gi_raw_cs_2 "%SH%\gi_raw.hlsl" >nul || goto :fail
-%DXC% -nologo -T cs_6_0 -E main -O3 -D GI_SCALE=0.5 -Fh "%B%\gen\gi_raw_half.h" -Vn g_gi_raw_cs_half "%SH%\gi_raw.hlsl" >nul || goto :fail
-(echo #pragma once& echo #include "gi_raw_1.h"& echo #include "gi_raw_pi.h"& echo #include "gi_raw_2.h"& echo #include "gi_raw_half.h") > "%B%\gen\gi_raw_cs.h"
+rem raw-GI replacement: 4 brightness scales x 4 AO modes
+echo #pragma once> "%B%\gen\gi_raw_cs.h"
+for %%S in (0 1 2 3) do for %%A in (0 1 2 3) do (
+	%DXC% -nologo -T cs_6_0 -E main -O3 -D GI_SCALE_IDX=%%S -D GI_AO_IDX=%%A -Fh "%B%\gen\gi_raw_s%%S_a%%A.h" -Vn g_gi_raw_s%%S_a%%A "%SH%\gi_raw.hlsl" >nul || goto :fail
+	echo #include "gi_raw_s%%S_a%%A.h">> "%B%\gen\gi_raw_cs.h"
+)
 
 set INC=/I"%B%\gen" /I"%ROOT%src" /I"%ROOT%external\reshade\include" /I"%ROOT%external\reshade\examples\utils" /I"%ROOT%external\streamline\include" /I"%ROOT%external\minhook\include"
 set CXXFLAGS=/nologo /c /O2 /MT /W3 /std:c++20 /EHsc /permissive- /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DUNICODE /D_UNICODE

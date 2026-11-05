@@ -25,6 +25,8 @@ namespace gi
 	void toggle();
 	void next_scale();
 	void set_scale(int index);
+	void set_ao(int index);   // 0 = off, 1 = soft 0.25 m, 2 = soft 1 m, 3 = hard 1.5 m
+	void next_ao();
 	// The bypass only acts while this is true (the mod sets it when DLSS-RR succeeded on recent frames),
 	// so raw noisy GI never reaches the screen without RR denoising it.
 	void set_allowed(bool allowed);
