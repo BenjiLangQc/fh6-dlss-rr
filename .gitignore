@@ -1,0 +1,13 @@
+# Build outputs (build.bat regenerates them)
+build/
+
+# Game captures: contain FH6's own shader bytecode/disassembly and logs - never commit
+captures/
+
+# Third-party clones, fetched at pinned versions by fetch_deps.bat
+external/reshade/
+external/minhook/
+
+# Runtime files if the add-on is ever run from here
+*.log
+fh6rr.ini
