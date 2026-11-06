@@ -79,6 +79,21 @@ Replace passes 3-4 with one compute pass of ours that writes, per pixel, into th
 - Gotcha: with LoadFromDllMain the addon outlives FH6's probe device; always follow the newest device.
 - RR path runs inside a scoped SEH guard (no VEH!) that logs the step and disables RR on a fault.
 
+## Standalone build (no ReShade) - working (2026-11-05)
+Lessons, each one cost a broken build:
+- Identify shaders by FNV over the **DXIL part only** (`gi::identity_hash`): FH6 embeds a different debug name
+  (ILDN part + container digest) with and without ReShade; the program is identical.
+  Temporal = 0x2065ab87ddffd305, spatial = 0x0f647000c451f382.
+- Intercepting D3D12CreateDevice (inline or import table) or hooking the native device's functions breaks RTSS's
+  overlay. Hook the device Streamline hands over (its wrapper, in sl.interposer.dll) instead.
+- Streamline does not wrap command lists in FH6. Native D3D12Core Dispatch/SetPipelineState hooks only see the
+  loading screen; gameplay lists use per-object heap vtables (calls end up in nvwgf2umx.dll). D3D12Core's
+  OMSetRenderTargets code is shared with unrelated methods - never treat its `this` as a list for discovery.
+- So the GI bypass swaps shaders **at pipeline creation**: temporal pass -> gi_raw.hlsl (RAW_REG=t20), spatial
+  pass -> gi_copy.hlsl (copies only signal A; must never write u3, which is the raygen output R309 in run 1).
+- The list the game hands Streamline is usually not unwrappable (heap vtable); record the RR guide pass on it
+  directly. Before that fix RR silently fell back to DLSS-SR on almost every frame.
+
 ## Phase 3 build order
 1. Debug views: a hotkey that blits each decoded guide (albedo, F0, roughness, normal) to screen to verify decoding
    and the RT6/RT7 question.

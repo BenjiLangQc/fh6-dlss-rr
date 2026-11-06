@@ -340,7 +340,10 @@ static void on_init_pipeline(device *dev, pipeline_layout layout, uint32_t count
 	}
 	if (info.type == '?') return;
 	if (info.type == 'C')
-		gi::on_pipeline(reinterpret_cast<ID3D12Device *>(dev->get_native()), reinterpret_cast<ID3D12RootSignature *>(layout.handle), info.hash, pipe.handle);
+	{
+		const auto *cs = [&]() -> const shader_desc * { for (uint32_t i = 0; i < count; ++i) if (subobjects[i].type == pipeline_subobject_type::compute_shader) return static_cast<const shader_desc *>(subobjects[i].data); return nullptr; }();
+		if (cs && cs->code) gi::on_pipeline(reinterpret_cast<ID3D12Device *>(dev->get_native()), reinterpret_cast<ID3D12RootSignature *>(layout.handle), gi::identity_hash(cs->code, cs->code_size), pipe.handle);
+	}
 	if (!info.code.empty())
 	{
 		static size_t total_bytes = 0;
@@ -798,8 +801,12 @@ static uint64_t bound_pipeline(command_list *cmd, pipeline_stage stage)
 static bool on_dispatch(command_list *cmd, uint32_t x, uint32_t y, uint32_t z)
 {
 	t_last_list = cmd->get_native();
-	if (gi::enabled() && gi::on_dispatch(cmd->get_native(), reinterpret_cast<ID3D12GraphicsCommandList *>(cmd->get_native())))
-		return true; // skipped (GI denoiser bypass)
+	if (gi::enabled())
+	{
+		ID3D12PipelineState *swap = nullptr;
+		if (gi::on_dispatch(cmd->get_native(), &swap)) return true; // skipped (GI denoiser bypass)
+		if (swap) reinterpret_cast<ID3D12GraphicsCommandList *>(cmd->get_native())->SetPipelineState(swap);
+	}
 	if (!g_recording.load(std::memory_order_relaxed)) return false;
 	Entry e{ EntryKind::dispatch };
 	e.pipe_hash = bound_pipeline(cmd, pipeline_stage::compute_shader);

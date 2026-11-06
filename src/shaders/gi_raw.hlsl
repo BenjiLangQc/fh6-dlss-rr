@@ -19,7 +19,12 @@
 static const float k_scales[4] = { 1.0, 3.14159265, 2.0, 0.5 };
 #define GI_SCALE k_scales[GI_SCALE_IDX]
 
-Texture2D<float4>   g_raw  : register(t23, space36);
+// RAW_REG: t23 when replacing spatial pass #2 at dispatch time (ReShade build), t20 when this shader replaces the
+// temporal pass at pipeline creation (standalone build: the temporal pass reads the raw GI from t20).
+#ifndef RAW_REG
+#define RAW_REG t23
+#endif
+Texture2D<float4>   g_raw  : register(RAW_REG, space36);
 RWTexture2D<float4> g_outA : register(u2, space36);
 RWTexture2D<float4> g_outB : register(u3, space36);
 

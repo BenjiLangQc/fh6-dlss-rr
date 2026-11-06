@@ -3,6 +3,7 @@ setlocal
 rem Builds (x64 Release, VS 2022 Build Tools):
 rem   build\mod\fh6rr.addon64          - the DLSS Ray Reconstruction mod (install this one)
 rem   build\recon\fh6rr_recon.addon64  - the analysis/recon tool (captures, debug views). Never install both.
+rem   build\standalone\xinput1_3.dll   - standalone mod without ReShade (proxy DLL). Do not combine with fh6rr.addon64.
 set ROOT=%~dp0
 set VSDEV="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
 if not exist %VSDEV% set VSDEV="C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
@@ -12,6 +13,7 @@ set B=%ROOT%build
 if not exist "%B%\gen" mkdir "%B%\gen"
 if not exist "%B%\mod" mkdir "%B%\mod"
 if not exist "%B%\recon" mkdir "%B%\recon"
+if not exist "%B%\standalone" mkdir "%B%\standalone"
 
 rem ---- shaders -> headers
 set DXC="C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxc.exe"
@@ -23,7 +25,11 @@ echo #pragma once> "%B%\gen\gi_raw_cs.h"
 for %%S in (0 1 2 3) do for %%A in (0 1 2 3) do (
 	%DXC% -nologo -T cs_6_0 -E main -O3 -D GI_SCALE_IDX=%%S -D GI_AO_IDX=%%A -Fh "%B%\gen\gi_raw_s%%S_a%%A.h" -Vn g_gi_raw_s%%S_a%%A "%SH%\gi_raw.hlsl" >nul || goto :fail
 	echo #include "gi_raw_s%%S_a%%A.h">> "%B%\gen\gi_raw_cs.h"
+	%DXC% -nologo -T cs_6_0 -E main -O3 -D GI_SCALE_IDX=%%S -D GI_AO_IDX=%%A -D RAW_REG=t20 -Fh "%B%\gen\gi_conv_s%%S_a%%A.h" -Vn g_gi_conv_s%%S_a%%A "%SH%\gi_raw.hlsl" >nul || goto :fail
+	echo #include "gi_conv_s%%S_a%%A.h">> "%B%\gen\gi_raw_cs.h"
 )
+%DXC% -nologo -T cs_6_0 -E main -O3 -Fh "%B%\gen\gi_copy_cs.h" -Vn g_gi_copy_cs "%SH%\gi_copy.hlsl" >nul || goto :fail
+echo #include "gi_copy_cs.h">> "%B%\gen\gi_raw_cs.h"
 
 set INC=/I"%B%\gen" /I"%ROOT%src" /I"%ROOT%external\reshade\include" /I"%ROOT%external\reshade\examples\utils" /I"%ROOT%external\streamline\include" /I"%ROOT%external\minhook\include"
 set CXXFLAGS=/nologo /c /O2 /MT /W3 /std:c++20 /EHsc /permissive- /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DUNICODE /D_UNICODE
@@ -47,8 +53,17 @@ cl %CXXFLAGS% %INC% "%ROOT%src\recon.cpp" "%ROOT%src\debug_view.cpp" "%ROOT%src\
 link /nologo /DLL /MAP:fh6rr_recon.map /OUT:fh6rr_recon.addon64 *.obj %LIBS% >nul || goto :failpop
 popd
 
+rem ---- standalone (no ReShade): proxy xinput1_3.dll
+pushd "%B%\standalone"
+del /q *.obj 2>nul
+cl /nologo /c /O2 /MT /W3 %INC% %MHSRC% >nul || goto :failpop
+cl %CXXFLAGS% %INC% "%ROOT%src\standalone.cpp" "%ROOT%src\xinput_proxy.cpp" "%ROOT%src\rr.cpp" "%ROOT%src\gi_bypass.cpp" || goto :failpop
+link /nologo /DLL /DEF:"%ROOT%src\xinput1_3.def" /MAP:xinput1_3.map /OUT:xinput1_3.dll *.obj %LIBS% >nul || goto :failpop
+popd
+
 echo Built: %B%\mod\fh6rr.addon64
 echo Built: %B%\recon\fh6rr_recon.addon64
+echo Built: %B%\standalone\xinput1_3.dll
 exit /b 0
 
 :failpop

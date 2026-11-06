@@ -16,9 +16,15 @@ namespace gi
 	void on_destroy_pipeline(uint64_t pipeline);
 	// From bind_pipeline (compute stage only).
 	void on_bind_compute(uint64_t list, uint64_t pipeline);
-	// From dispatch. Returns true when the dispatch must be skipped.
-	bool on_dispatch(uint64_t list, ID3D12GraphicsCommandList *native);
+	// From dispatch. Returns true when the dispatch must be skipped. When *swap_to is set, the caller must bind
+	// that pipeline state on the native list before the dispatch runs (done outside gi's lock, so a hooked
+	// SetPipelineState can safely re-enter on_bind_compute).
+	bool on_dispatch(uint64_t list, ID3D12PipelineState **swap_to);
 	void on_reset(uint64_t list);
+
+	// Shader identity = FNV-1a over the container's DXIL program part only. FH6 embeds a different debug name
+	// (ILDN part, plus the container digest) depending on whether ReShade is loaded; the program is identical.
+	uint64_t identity_hash(const void *code, size_t size);
 
 	bool enabled();
 	void set_enabled(bool on);

@@ -23,6 +23,18 @@ Personal, offline-tested mod. FH6 is an online game: injecting code into it coul
 
 On first launch the add-on writes `fh6rr.ini` and `fh6rr.log` next to it.
 
+## Standalone version (no ReShade)
+`build\standalone\xinput1_3.dll` does the same without ReShade. FH6 loads `xinput1_3.dll` from its own folder
+at startup; the proxy forwards every controller call to the real System32 copy.
+
+1. Copy `xinput1_3.dll` next to `forzahorizon6.exe`.
+2. Remove ReShade's `dxgi.dll` and `fh6rr.addon64` from the game folder (use one version, never both).
+
+Differences from the ReShade add-on:
+- **No hotkeys.** The GI denoiser bypass is applied when the game creates its GI pipelines, so every setting in
+  `fh6rr.ini` (`rr`, `gi_bypass`, `gi_scale`, `gi_ao`) is read **at launch**. Restart the game after changing it.
+- RTSS works with it (the device hooks sit on Streamline's wrapper; see notes for why).
+
 ## Use
 | Key | Action |
 |---|---|
