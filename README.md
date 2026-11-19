@@ -69,6 +69,8 @@ run `build.bat` (VS 2022 Build Tools, Windows SDK 10.0.26100 for `dxc.exe`). Out
 Third-party code in `external/`: ReShade headers (BSD-3), NVIDIA Streamline headers (MIT), MinHook (BSD-2).
 
 ## Known limits
-- Tied to the current FH6 build: shader hashes (`ea12dd2b624b6962`, `6e9ffce615b836da`) and G-buffer layout can
-  change with a game patch. If the hashes change, the GI bypass simply stays inactive (RR still works).
+- Tied to the current FH6 build: the GI shaders are recognized by a hash of their DXIL program
+  (`2065ab87ddffd305` temporal, `0f647000c451f382` spatial), and the G-buffer layout can change with a game patch.
+  If the shaders change, the GI bypass simply stays inactive (RR still works). Check `fh6rr.log`: "temporal pipes 0,
+  spatial pipes 0" means the shaders were not recognized.
 - Scalar specular (flagged materials) uses F0 = 0.04; RT6 colored F0 is used where the game uses it.
