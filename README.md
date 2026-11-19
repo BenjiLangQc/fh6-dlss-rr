@@ -49,6 +49,11 @@ hotkeys=1     ; F8/F7/F6 toggles
 toggle_key=119 ; master on/off key as a Windows virtual-key code: 119 = F8, 120 = F9, 121 = F10
 ```
 
+## Recommended: Ray Reconstruction preset F
+For the best denoising quality, set DLSS Ray Reconstruction to **preset F** in the NVIDIA app: Graphics >
+Program Settings > Forza Horizon 6 > DLSS Override - Model Presets > Ray Reconstruction. In testing it gave
+clearly cleaner results than the default, especially in cockpit view.
+
 ## How it works
 1. Hooks Streamline's `slInit` and adds DLSS Ray Reconstruction (`kFeatureDLSS_RR`) to the game's feature list.
 2. Each frame, instead of the game's DLSS-SR evaluate, it runs a compute pass that decodes FH6's G-buffer into RR
@@ -74,5 +79,5 @@ Third-party code in `external/`: ReShade headers (BSD-3), NVIDIA Streamline head
   If the shaders change, the GI bypass simply stays inactive (RR still works). Check `fh6rr.log`: "temporal pipes 0,
   spatial pipes 0" means the shaders were not recognized.
 - Colour speckles in thin, partly hidden areas (for example between the steering wheel and the dash in cockpit
-  view) come from Ray Reconstruction's model. Selecting RR preset F in the NVIDIA app reduced them a lot in testing.
+  view) come from Ray Reconstruction's model; RR preset F (see above) reduces them a lot.
 - Scalar specular (flagged materials) uses F0 = 0.04; RT6 colored F0 is used where the game uses it.
