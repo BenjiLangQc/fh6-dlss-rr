@@ -28,6 +28,26 @@ Texture2D<float4>   g_raw  : register(RAW_REG, space36);
 RWTexture2D<float4> g_outA : register(u2, space36);
 RWTexture2D<float4> g_outB : register(u3, space36);
 
+// The game's temporal pass (which this replaces) blends each raw sample toward a world-space radiance cache and
+// stores it as half floats, so it never passes extreme samples on. Raw 1-ray GI can contain Inf/NaN and fireflies
+// (a single ray hitting the sun or a bright sky). Unfiltered, a NaN turns into NaN lighting that RR and the bloom
+// smear across the screen (magenta/white sparkles, blown-out exposure), and fireflies become glowing blobs.
+
+// Inf/NaN test on the bits: isfinite() can be folded away under fast-math.
+bool finite3(float3 c)
+{
+	const uint3 e = asuint(c) & 0x7f800000u;
+	return all(e != 0x7f800000u);
+}
+
+float3 load_radiance(int2 p, int2 size)
+{
+	const float3 c = g_raw[clamp(p, int2(0, 0), size - 1)].rgb;
+	return finite3(c) ? min(max(c, 0.0), 60000.0) : 0.0;  // 60000: stay inside the half-float range
+}
+
+float luma(float3 c) { return 0.25 * c.r + 0.5 * c.g + 0.25 * c.b; }
+
 [numthreads(8, 8, 1)]
 void main(uint2 id : SV_DispatchThreadID)
 {
@@ -36,8 +56,27 @@ void main(uint2 id : SV_DispatchThreadID)
 	if (id.x >= w || id.y >= h)
 		return;
 
+	uint rw, rh;
+	g_raw.GetDimensions(rw, rh);
+	const int2 size = int2(rw, rh);
+	const int2 p = int2(id);
+
 	const float4 raw = g_raw[id];
-	const float3 L = max(raw.rgb, 0.0) * GI_SCALE;
+	float3 L = load_radiance(p, size);
+
+	// Firefly clamp: limit the pixel to 2x the brightest of its 8 neighbours. Isolated outliers are cut; anything
+	// a neighbour also sees (real structure, highlights wider than a pixel) is kept.
+	float nmax = 0.0;
+	[unroll] for (int dy = -1; dy <= 1; ++dy)
+	[unroll] for (int dx = -1; dx <= 1; ++dx)
+		if (dx != 0 || dy != 0)
+			nmax = max(nmax, luma(load_radiance(p + int2(dx, dy), size)));
+	const float yc = luma(L);
+	const float ymax = 2.0 * nmax;
+	if (yc > ymax)
+		L *= ymax / yc;  // yc > ymax >= 0, so yc > 0
+
+	L *= GI_SCALE;
 	// Visibility from the ray hit distance (hitT <= 0 means the ray missed / no hit)
 #if GI_AO_IDX == 0
 	const float ao = 1.0;

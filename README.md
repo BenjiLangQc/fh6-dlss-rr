@@ -73,4 +73,6 @@ Third-party code in `external/`: ReShade headers (BSD-3), NVIDIA Streamline head
   (`2065ab87ddffd305` temporal, `0f647000c451f382` spatial), and the G-buffer layout can change with a game patch.
   If the shaders change, the GI bypass simply stays inactive (RR still works). Check `fh6rr.log`: "temporal pipes 0,
   spatial pipes 0" means the shaders were not recognized.
+- Colour speckles in thin, partly hidden areas (for example between the steering wheel and the dash in cockpit
+  view) come from Ray Reconstruction's model. Selecting RR preset F in the NVIDIA app reduced them a lot in testing.
 - Scalar specular (flagged materials) uses F0 = 0.04; RT6 colored F0 is used where the game uses it.
