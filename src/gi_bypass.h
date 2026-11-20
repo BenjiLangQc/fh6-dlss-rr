@@ -33,6 +33,14 @@ namespace gi
 	void set_scale(int index);
 	void set_ao(int index);   // 0 = off, 1 = soft 0.25 m, 2 = soft 1 m, 3 = hard 1.5 m
 	void next_ao();
+	int ao();
+	const char *ao_name(int index);
+
+	// For the status panel: GI shader pipelines recognized so far, and whether the replacement exists.
+	struct Status { size_t temporal_pipes, spatial_pipes; bool replacement_ready, allowed; };
+	Status status();
+	// Logs the bypass state; `source` names who changed it (e.g. "overlay"), or nullptr.
+	void log_state(const char *source);
 	// The bypass only acts while this is true (the mod sets it when DLSS-RR succeeded on recent frames),
 	// so raw noisy GI never reaches the screen without RR denoising it.
 	void set_allowed(bool allowed);

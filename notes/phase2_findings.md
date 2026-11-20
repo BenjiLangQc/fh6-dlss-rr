@@ -30,6 +30,30 @@ foliage/buildings/trim = dielectrics, 0.04 is physically right). Normal = RT3 oc
 second normal exactly like the game when (flags & 65) == 0. Roughness = 1 - RT3 low byte.
 Diffuse albedo = RT4 rgb (sRGB view). Specular albedo = EnvBRDF approx(F0, roughness, NdotV).
 
+**Revised (2026-11-19), from the lighting PS code (lines ~440-603, 1003-1005, 1168-1177):** the game selects F0 as
+`bit5 ? RT4.a (scalar) : (bit0 == 0 ? unpack(RT6) : 0.04)`, then uses diffuse = RT4.rgb * (1 - F0) (or float[8].rgb when
+bit6 is set) and specular = env-BRDF fit `F0 * scale + bias`, times RT2.x/127 when bit5. So RT4.a (car paint ~0.75) IS the
+F0 of bit5 materials. The old guide decode ignored bit5 and read RT6 there; on roads (bit5 materials) RT6 holds unrelated
+data, which put seams at asphalt patch borders after RR (A/B in game: forcing 0.04 removed them). Guides now use the
+game's rule; the overlay keeps "0.04 everywhere" and "RT6 (old)" for comparison. Not yet handled: bit6 diffuse = float[8].
+
+**Final (2026-11-19):** guide F0 = **0.04 everywhere** is the default. The game's exact rule still put a seam on the
+cockpit's carbon panel (a lighter band with a straight edge where the material switches F0 path; gone with 0.04, A/B
+screenshots 21:42:43 vs 21:43:00; with the mod off, 21:45:26, the game itself shows no seam and matches the 0.04 result). Any per-material F0 jump in the guides shows up after RR as a step along material
+borders, so a constant dielectric F0 gives RR the cleanest input. Cost: the guides understate bare-metal reflectance;
+no visible problem seen so far. Overlay F0 options: 0.04 everywhere (default) / Game's rule / RT6 (old).
+
+**Confirmed (2026-11-19):** the cockpit seam is view- and sun-dependent (only with the car facing north, gone
+facing east/west), i.e. a reflection RR rebuilds, not a material edge. Facing north: mod off - no seam; 0.04 - no seam;
+Game's rule - seam, even after also applying the game's bit5 specular scale (RT2.x/127) to the specular guide; RT6 (old)
+- seam. Per-material F0 in the guides is what triggers it, so 0.04 everywhere stays the default.
+Metal check (iridescent rim, 22:03:02 0.04 vs 22:03:27 Game's rule): rim identical (fine detail 6.17 vs 6.27,
+same brightness and saturation), so 0.04 costs nothing visible on metal; Game's rule meanwhile broke the sky reflection
+on the car paint above the arch into blocky steps. 0.04 everywhere confirmed as the default.
+Rear panels (same pair): Game's rule gave blotchy dark smears on the black panels: their high F0 makes the
+diffuse guide base*(1-F0) near black, and RR divides by it, amplifying noise. So the game's F0 is harmful in the
+diffuse guide too (a 'game diffuse / 0.04 specular' hybrid was considered and dropped for this reason).
+
 Depth for GI shaders: Hi-Z `R32_TL mips=11`; view Z = `cb0[0].w / (d - cb0[0].z)`, d <= 0 = sky.
 
 ## GI signal chain

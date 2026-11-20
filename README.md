@@ -38,6 +38,13 @@ Use one version at a time.
 Both start on. The GI bypass only acts while RR is actually running, so raw noisy GI never reaches the screen
 without RR denoising it. If anything RR needs is missing, the add-on logs it and leaves the game's DLSS in place.
 
+### Status panel
+Open the ReShade menu > **Add-ons** > **FH6 DLSS Ray Reconstruction**:
+- RR on/off with its live render and output resolution, and the RR model (game / NVIDIA app default, preset D, preset E).
+- GI denoiser bypass on/off with its state: active, waiting for RR, or "shaders not recognized" after a game patch.
+- Raw GI occlusion mode.
+- Debug: show the raw GI without denoising; guide options for comparisons. None of these are saved.
+
 `fh6rr.ini`:
 ```ini
 [fh6rr]
@@ -45,6 +52,7 @@ rr=1          ; start with RR on
 gi_bypass=1   ; start with the GI denoiser bypass on
 gi_scale=0    ; raw GI brightness: 0 = x1 (matches the game), 1 = xPI, 2 = x2, 3 = x0.5
 gi_ao=2       ; raw GI occlusion from ray hit distance: 0 = off, 1 = soft 0.25 m, 2 = soft 1 m (matches the game), 3 = hard 1.5 m
+rr_preset=0   ; RR model: 0 = game / NVIDIA app default, 4 = preset D, 5 = preset E
 hotkeys=1     ; F8/F7/F6 toggles
 toggle_key=119 ; master on/off key as a Windows virtual-key code: 119 = F8, 120 = F9, 121 = F10
 ```
@@ -80,4 +88,6 @@ Third-party code in `external/`: ReShade headers (BSD-3), NVIDIA Streamline head
   spatial pipes 0" means the shaders were not recognized.
 - Colour speckles in thin, partly hidden areas (for example between the steering wheel and the dash in cockpit
   view) come from Ray Reconstruction's model; RR preset F (see above) reduces them a lot.
-- Scalar specular (flagged materials) uses F0 = 0.04; RT6 colored F0 is used where the game uses it.
+- The RR guides use a constant specular F0 of 0.04 (dielectric) for every material. Using the game's per-material
+  F0 put seams on roads and car interiors and dark blotches on black panels after RR; metal parts showed no visible
+  difference with 0.04. Details in `notes/phase2_findings.md`.

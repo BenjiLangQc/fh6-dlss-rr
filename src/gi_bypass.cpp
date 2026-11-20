@@ -77,13 +77,28 @@ namespace gi
 		s_ao = a;
 		logf("GI bypass AO: %s", k_ao_names[a]);
 	}
+	int ao() { return s_ao.load(); }
+	const char *ao_name(int index) { return index >= 0 && index < k_ao_count ? k_ao_names[index] : "?"; }
+
+	Status status()
+	{
+		std::lock_guard lock(s_mtx);
+		return { s_temporal_pipes.size(), s_spatial_pipes.size(), s_pso[0][0] != nullptr, s_allowed.load() };
+	}
+
+	void log_state(const char *source)
+	{
+		const bool on = s_enabled.load();
+		std::lock_guard lock(s_mtx);
+		logf("GI bypass: %s (scale %s, AO %s, temporal pipes %zu, spatial pipes %zu, replacement %s)%s%s", on ? "ON" : "OFF",
+			k_scale_names[s_scale.load()], k_ao_names[s_ao.load()], s_temporal_pipes.size(), s_spatial_pipes.size(),
+			s_pso[0][0] ? "ready" : "NOT created", source ? " - " : "", source ? source : "");
+	}
+
 	void toggle()
 	{
-		const bool on = !s_enabled.load();
-		s_enabled = on;
-		std::lock_guard lock(s_mtx);
-		logf("GI bypass: %s (scale %s, AO %s, temporal pipes %zu, spatial pipes %zu, replacement %s)", on ? "ON" : "OFF",
-			k_scale_names[s_scale.load()], k_ao_names[s_ao.load()], s_temporal_pipes.size(), s_spatial_pipes.size(), s_pso[0][0] ? "ready" : "NOT created");
+		s_enabled = !s_enabled.load();
+		log_state(nullptr);
 	}
 	void next_scale()
 	{

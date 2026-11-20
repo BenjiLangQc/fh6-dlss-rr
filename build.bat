@@ -26,7 +26,7 @@ for %%S in (0 1 2 3) do for %%A in (0 1 2 3) do (
 	echo #include "gi_raw_s%%S_a%%A.h">> "%B%\gen\gi_raw_cs.h"
 )
 
-set INC=/I"%B%\gen" /I"%ROOT%src" /I"%ROOT%external\reshade\include" /I"%ROOT%external\reshade\examples\utils" /I"%ROOT%external\streamline\include" /I"%ROOT%external\minhook\include"
+set INC=/I"%B%\gen" /I"%ROOT%src" /I"%ROOT%external\reshade\include" /I"%ROOT%external\reshade\examples\utils" /I"%ROOT%external\streamline\include" /I"%ROOT%external\minhook\include" /I"%ROOT%external\imgui"
 set CXXFLAGS=/nologo /c /O2 /MT /W3 /std:c++20 /EHsc /permissive- /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DUNICODE /D_UNICODE
 set MH=%ROOT%external\minhook\src
 set MHSRC="%MH%\hook.c" "%MH%\buffer.c" "%MH%\trampoline.c" "%MH%\hde\hde64.c"

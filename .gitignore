@@ -7,6 +7,7 @@ captures/
 # Third-party clones, fetched at pinned versions by fetch_deps.bat
 external/reshade/
 external/minhook/
+external/imgui/
 
 # Runtime files if the add-on is ever run from here
 *.log
